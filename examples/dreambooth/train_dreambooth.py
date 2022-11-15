@@ -748,7 +748,7 @@ def main():
                      #      text_encoder=accelerator.unwrap_model(text_encoder),
                      #)
                      #pipeline.save_pretrained(save_dir)
-                     torch.save(accelerator.unwrap_model(unet).half().state_dict(), str(Path(args.output_dir+"unet.pkl")))
+                     torch.save(accelerator.unwrap_model(unet).half().state_dict(), str(Path(args.Session_dir+"/" + inst + "unet.pkl")))
                      #frz_dir=args.output_dir + "/text_encoder_frozen"                    
                      #if args.train_text_encoder and os.path.exists(frz_dir):
                      #   subprocess.call('rm -r '+save_dir+'/text_encoder/*.*', shell=True)
