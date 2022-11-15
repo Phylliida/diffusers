@@ -43,6 +43,13 @@ def parse_args():
         help="Pretrained tokenizer name or path if not the same as model_name",
     )
     parser.add_argument(
+        "--unet_resume",
+        type=str,
+        default=None,
+        required=False,
+        help="unet to resume from",
+    )
+    parser.add_argument(
         "--instance_data_dir",
         type=str,
         default=None,
@@ -482,6 +489,14 @@ def main():
       text_encoder = CLIPTextModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="text_encoder")
     vae = AutoencoderKL.from_pretrained(args.pretrained_model_name_or_path, subfolder="vae")
     unet = UNet2DConditionModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="unet")
+    
+    
+    if hasattr(args, "unet_resume"):
+      print("loading unet weights from", args.unet_resume)
+      unet.load_state_dict(torch.load(args.unet_resume))
+      unet.half()
+      unet.to(vae.device)
+    
 
     vae.requires_grad_(False)
     if not args.train_text_encoder:
@@ -727,19 +742,19 @@ def main():
                   print(" [1;32mSAVING CHECKPOINT: "+args.Session_dir+"/"+inst+".ckpt")
                   # Create the pipeline using the trained modules and save it.
                   if accelerator.is_main_process:
-                     pipeline = StableDiffusionPipeline.from_pretrained(
-                           args.pretrained_model_name_or_path,
-                           unet=accelerator.unwrap_model(unet),
-                           text_encoder=accelerator.unwrap_model(text_encoder),
-                     )
-                     pipeline.save_pretrained(save_dir)
-                     torch.save(pipeline.unet.half().state_dict(), str(Path(args.output_dir+"unet.pkl")))
-                     frz_dir=args.output_dir + "/text_encoder_frozen"                    
-                     if args.train_text_encoder and os.path.exists(frz_dir):
-                        subprocess.call('rm -r '+save_dir+'/text_encoder/*.*', shell=True)
-                        subprocess.call('cp -f '+frz_dir +'/*.* '+ save_dir+'/text_encoder', shell=True)                     
-                     chkpth=args.Session_dir+"/"+inst+".ckpt"
-                     subprocess.call('python /content/diffusers/scripts/convert_diffusers_to_original_stable_diffusion.py --model_path ' + save_dir + ' --checkpoint_path ' + chkpth + ' --half', shell=True)
+                     #pipeline = StableDiffusionPipeline.from_pretrained(
+                     #      args.pretrained_model_name_or_path,
+                     #      unet=accelerator.unwrap_model(unet),
+                     #      text_encoder=accelerator.unwrap_model(text_encoder),
+                     #)
+                     #pipeline.save_pretrained(save_dir)
+                     torch.save(accelerator.unwrap_model(unet).half().state_dict(), str(Path(args.output_dir+"unet.pkl")))
+                     #frz_dir=args.output_dir + "/text_encoder_frozen"                    
+                     #if args.train_text_encoder and os.path.exists(frz_dir):
+                     #   subprocess.call('rm -r '+save_dir+'/text_encoder/*.*', shell=True)
+                     #   subprocess.call('cp -f '+frz_dir +'/*.* '+ save_dir+'/text_encoder', shell=True)                     
+                     #chkpth=args.Session_dir+"/"+inst+".ckpt"
+                     #subprocess.call('python /content/diffusers/scripts/convert_diffusers_to_original_stable_diffusion.py --model_path ' + save_dir + ' --checkpoint_path ' + chkpth + ' --half', shell=True)
                      i=i+args.save_n_steps
             
         accelerator.wait_for_everyone()
