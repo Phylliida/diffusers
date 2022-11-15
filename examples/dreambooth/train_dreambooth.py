@@ -491,7 +491,7 @@ def main():
     unet = UNet2DConditionModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="unet")
     
     
-    if hasattr(args, "unet_resume") and not args.unet_resume is None:
+    if hasattr(args, "unet_resume") and args.unet_resume != "" and not args.unet_resume is None:
       print("loading unet weights from", args.unet_resume)
       unet.load_state_dict(torch.load(args.unet_resume))
       unet.to(vae.device)
