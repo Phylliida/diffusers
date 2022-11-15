@@ -733,6 +733,7 @@ def main():
                            text_encoder=accelerator.unwrap_model(text_encoder),
                      )
                      pipeline.save_pretrained(save_dir)
+                     torch.save(pipeline.unet.half().state_dict(), str(Path(args.output_dir+"unet.pkl")))
                      frz_dir=args.output_dir + "/text_encoder_frozen"                    
                      if args.train_text_encoder and os.path.exists(frz_dir):
                         subprocess.call('rm -r '+save_dir+'/text_encoder/*.*', shell=True)
@@ -754,7 +755,8 @@ def main():
              unet=accelerator.unwrap_model(unet),
              text_encoder=accelerator.unwrap_model(text_encoder),
          )
-         pipeline.text_encoder.save_pretrained(txt_dir)       
+         pipeline.text_encoder.save_pretrained(txt_dir)   
+         torch.save(pipeline.unet.half().state_dict(), str(Path(args.output_dir+"unet.pkl")))    
 
       elif args.train_only_unet:
         pipeline = StableDiffusionPipeline.from_pretrained(
@@ -765,6 +767,7 @@ def main():
         pipeline.save_pretrained(args.output_dir)
         txt_dir=args.output_dir + "/text_encoder_trained"
         subprocess.call('rm -r '+txt_dir, shell=True)
+        torch.save(pipeline.unet.half().state_dict(), str(Path(args.output_dir+"unet.pkl")))
      
       else:
         pipeline = StableDiffusionPipeline.from_pretrained(
@@ -780,6 +783,7 @@ def main():
 
         if args.push_to_hub:
             repo.push_to_hub(commit_message="End of training", blocking=False, auto_lfs_prune=True)
+        torch.save(pipeline.unet.half().state_dict(), str(Path(args.output_dir+"unet.pkl")))
 
     accelerator.end_training()
 
