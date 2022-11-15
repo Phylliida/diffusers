@@ -494,8 +494,8 @@ def main():
     if hasattr(args, "unet_resume") and not args.unet_resume is None:
       print("loading unet weights from", args.unet_resume)
       unet.load_state_dict(torch.load(args.unet_resume))
-      unet.half()
       unet.to(vae.device)
+      unet.type(vae.dtype)
     
 
     vae.requires_grad_(False)
@@ -640,10 +640,12 @@ def main():
     logger.info(f"  Gradient Accumulation steps = {args.gradient_accumulation_steps}")
     logger.info(f"  Total optimization steps = {args.max_train_steps}")
     # Only show the progress bar once on each machine.
-    progress_bar = tqdm(range(args.max_train_steps), disable=not accelerator.is_local_main_process)
-    global_step = 0
-
-    for epoch in range(args.num_train_epochs):
+    progress_bar = tqdm(range(0, args.max_train_steps+args.save_starting_step), disable=not accelerator.is_local_main_process)
+    if args.save_starting_step > 0:
+      progress_bar.update(args.save_starting_step)
+    
+    global_step = args.save_starting_step
+    for epoch in range(args.save_starting_step, args.max_train_steps+args.save_starting_step):
         unet.train()
         if args.train_text_encoder:
             text_encoder.train()
@@ -711,8 +713,7 @@ def main():
             progress_bar.set_postfix(**logs)
             progress_bar.set_description_str("Progress:"+pr)
             accelerator.log(logs, step=global_step)
-
-            if global_step >= args.max_train_steps:
+            if global_step >= args.save_starting_step + args.max_train_steps:
                 break
 
             if args.train_text_encoder and global_step == args.stop_text_encoder_training and global_step >= 30:
