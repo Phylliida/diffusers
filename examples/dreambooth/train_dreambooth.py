@@ -480,11 +480,11 @@ def main():
     # Load models and create wrapper for stable diffusion
     if args.train_only_unet:
       if os.path.exists(str(args.output_dir+"/text_encoder_trained")):
-        text_encoder = CLIPTextModel.from_pretrained(args.output_dir, subfolder="text_encoder_trained")
+        text_encoder = CLIPTextModel.from_pretrained(args.output_dir, subfolder="text_encoder_trained", use_auth_token=args.hub_token)
       elif os.path.exists(str(args.output_dir+"/text_encoder")):
-        text_encoder = CLIPTextModel.from_pretrained(args.output_dir, subfolder="text_encoder")
+        text_encoder = CLIPTextModel.from_pretrained(args.output_dir, subfolder="text_encoder", use_auth_token=args.hub_token)
       else:
-        text_encoder = CLIPTextModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="text_encoder")
+        text_encoder = CLIPTextModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="text_encoder", use_auth_token=args.hub_token)
     else:
       text_encoder = CLIPTextModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="text_encoder")
     vae = AutoencoderKL.from_pretrained(args.pretrained_model_name_or_path, subfolder="vae", use_auth_token=args.hub_token)
