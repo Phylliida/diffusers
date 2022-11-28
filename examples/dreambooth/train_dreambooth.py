@@ -490,9 +490,9 @@ def main():
     print("using device", accelerator.device)
     
     print("loading unet")
-    unet = torch.load("unet.pkl")
+    unet = torch.load("unet.pkl").to(accelerator.device)
     print("loading vae")
-    vae = torch.load("vae.pkl")
+    vae = torch.load("vae.pkl").to(accelerator.device)
     #vae = AutoencoderKL.from_pretrained(args.pretrained_model_name_or_path, subfolder="vae", use_auth_token=args.hub_token, device=accelerator.device).to(accelerator.device)
     #unet = UNet2DConditionModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="unet", use_auth_token=args.hub_token, device=accelerator.device).to(accelerator.device)
     
@@ -557,7 +557,6 @@ def main():
         args=args,
     )
     
-    return
 
     def collate_fn(examples):
         input_ids = [example["instance_prompt_ids"] for example in examples]
