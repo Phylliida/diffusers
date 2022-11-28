@@ -236,7 +236,7 @@ def parse_args():
     parser.add_argument(
         "--train_only_unet",
         action="store_true",
-        default=False,        
+        default=True,        
         help="Train only the unet",
     )
     
@@ -473,21 +473,20 @@ def main():
 
     # Load the tokenizer
     if args.tokenizer_name:
-        tokenizer = CLIPTokenizer.from_pretrained(args.tokenizer_name, use_auth_token=args.hub_token)
+        tokenizer = CLIPTokenizer.from_pretrained(args.tokenizer_name)
     elif args.pretrained_model_name_or_path:
-        tokenizer = CLIPTokenizer.from_pretrained(args.pretrained_model_name_or_path, subfolder="tokenizer", use_auth_token=args.hub_token)
+        tokenizer = CLIPTokenizer.from_pretrained(args.pretrained_model_name_or_path, subfolder="tokenizer")
 
     # Load models and create wrapper for stable diffusion
     if args.train_only_unet:
       if os.path.exists(str(args.output_dir+"/text_encoder_trained")):
-        text_encoder = CLIPTextModel.from_pretrained(args.output_dir, subfolder="text_encoder_trained", use_auth_token=args.hub_token)
+        text_encoder = CLIPTextModel.from_pretrained(args.output_dir, subfolder="text_encoder_trained")
       elif os.path.exists(str(args.output_dir+"/text_encoder")):
-        text_encoder = CLIPTextModel.from_pretrained(args.output_dir, subfolder="text_encoder", use_auth_token=args.hub_token)
+        text_encoder = CLIPTextModel.from_pretrained(args.output_dir, subfolder="text_encoder")
       else:
-        text_encoder = CLIPTextModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="text_encoder", use_auth_token=args.hub_token)
+        text_encoder = CLIPTextModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="text_encoder")
     else:
-      text_encoder = CLIPTextModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="text_encoder", use_auth_token=args.hub_token)
-    print("using device", accelerator.device)
+      text_encoder = CLIPTextModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="text_encoder")
     
     print("loading unet")
     unet = torch.load("unet.pkl").to(accelerator.device).float()
@@ -495,6 +494,7 @@ def main():
     vae = torch.load("vae.pkl").to(accelerator.device).float()
     #vae = AutoencoderKL.from_pretrained(args.pretrained_model_name_or_path, subfolder="vae", use_auth_token=args.hub_token, device=accelerator.device).to(accelerator.device)
     #unet = UNet2DConditionModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="unet", use_auth_token=args.hub_token, device=accelerator.device).to(accelerator.device)
+    
     
     
     if hasattr(args, "unet_resume") and args.unet_resume != "" and not args.unet_resume is None:
@@ -556,7 +556,6 @@ def main():
         center_crop=args.center_crop,
         args=args,
     )
-    
 
     def collate_fn(examples):
         input_ids = [example["instance_prompt_ids"] for example in examples]
@@ -722,32 +721,18 @@ def main():
             accelerator.log(logs, step=global_step)
             if global_step >= args.save_starting_step + args.max_train_steps:
                 break
-
-            if args.train_text_encoder and global_step == args.stop_text_encoder_training and global_step >= 30:
-              if accelerator.is_main_process:
-                print(" [0;32m" +" Freezing the text_encoder ..."+" [0m")                
-                frz_dir=args.output_dir + "/text_encoder_frozen"
-                if os.path.exists(frz_dir):
-                  subprocess.call('rm -r '+ frz_dir, shell=True)
-                os.mkdir(frz_dir)
-                pipeline = StableDiffusionPipeline.from_pretrained(
-                    args.pretrained_model_name_or_path,
-                    unet=accelerator.unwrap_model(unet),
-                    text_encoder=accelerator.unwrap_model(text_encoder),
-                )
-                pipeline.text_encoder.save_pretrained(frz_dir)
                          
             if args.save_n_steps >= 1:
                if global_step % args.save_n_steps == args.save_n_steps-1:
-                  ckpt_name = "_step_" + str(global_step+1)
-                  save_dir = Path(args.output_dir+ckpt_name)
+                  ckpt_name = "step_" + str(global_step+1) + "_"
+                  save_dir = Path(args.output_dir + "/" +ckpt_name)
                   save_dir=str(save_dir)
-                  save_dir=save_dir.replace(" ", "_")                    
-                  if not os.path.exists(save_dir):
-                     os.mkdir(save_dir)
-                  inst=save_dir[16:]
-                  inst=inst.replace(" ", "_")
-                  print(" [1;32mSAVING CHECKPOINT: "+args.Session_dir+"/"+inst+".ckpt")
+                  #save_dir=save_dir.replace(" ", "_")                    
+                  #if not os.path.exists(save_dir):
+                  #   os.mkdir(save_dir)
+                  #inst=save_dir[16:]
+                  #inst=inst.replace(" ", "_")
+                  print(" [1;32mSAVING CHECKPOINT: "+ save_dir)
                   # Create the pipeline using the trained modules and save it.
                   if accelerator.is_main_process:
                      #pipeline = StableDiffusionPipeline.from_pretrained(
@@ -759,7 +744,7 @@ def main():
                      unet_unwrap = accelerator.unwrap_model(unet)
                      dt = unet_unwrap.dtype
                      unet_unwrap.half()
-                     torch.save(unet_unwrap.state_dict(), str(Path(args.Session_dir+"/" + inst + "unet.pkl")))
+                     torch.save(unet_unwrap.state_dict(), str(Path(save_dir + "unet.pkl")))
                      unet_unwrap.type(dt)
                      #frz_dir=args.output_dir + "/text_encoder_frozen"                    
                      #if args.train_text_encoder and os.path.exists(frz_dir):
