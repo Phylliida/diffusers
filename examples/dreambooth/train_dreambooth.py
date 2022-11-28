@@ -488,8 +488,13 @@ def main():
     else:
       text_encoder = CLIPTextModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="text_encoder", use_auth_token=args.hub_token)
     print("using device", accelerator.device)
-    vae = AutoencoderKL.from_pretrained(args.pretrained_model_name_or_path, subfolder="vae", use_auth_token=args.hub_token, device=accelerator.device).to(accelerator.device)
-    unet = UNet2DConditionModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="unet", use_auth_token=args.hub_token, device=accelerator.device).to(accelerator.device)
+    
+    print("loading unet")
+    unet = torch.load("unet.pkl")
+    print("loading vae")
+    vae = torch.load("vae.pkl")
+    #vae = AutoencoderKL.from_pretrained(args.pretrained_model_name_or_path, subfolder="vae", use_auth_token=args.hub_token, device=accelerator.device).to(accelerator.device)
+    #unet = UNet2DConditionModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="unet", use_auth_token=args.hub_token, device=accelerator.device).to(accelerator.device)
     
     
     if hasattr(args, "unet_resume") and args.unet_resume != "" and not args.unet_resume is None:
@@ -551,6 +556,8 @@ def main():
         center_crop=args.center_crop,
         args=args,
     )
+    
+    return
 
     def collate_fn(examples):
         input_ids = [example["instance_prompt_ids"] for example in examples]
