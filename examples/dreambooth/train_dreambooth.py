@@ -490,9 +490,9 @@ def main():
     print("using device", accelerator.device)
     
     print("loading unet")
-    unet = torch.load("unet.pkl").to(accelerator.device)
+    unet = torch.load("unet.pkl").to(accelerator.device).float()
     print("loading vae")
-    vae = torch.load("vae.pkl").to(accelerator.device)
+    vae = torch.load("vae.pkl").to(accelerator.device).float()
     #vae = AutoencoderKL.from_pretrained(args.pretrained_model_name_or_path, subfolder="vae", use_auth_token=args.hub_token, device=accelerator.device).to(accelerator.device)
     #unet = UNet2DConditionModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="unet", use_auth_token=args.hub_token, device=accelerator.device).to(accelerator.device)
     
