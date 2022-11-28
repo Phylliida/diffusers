@@ -236,7 +236,7 @@ def parse_args():
     parser.add_argument(
         "--train_only_unet",
         action="store_true",
-        default=True,        
+        default=False,        
         help="Train only the unet",
     )
     
@@ -473,20 +473,21 @@ def main():
 
     # Load the tokenizer
     if args.tokenizer_name:
-        tokenizer = CLIPTokenizer.from_pretrained(args.tokenizer_name)
+        tokenizer = CLIPTokenizer.from_pretrained(args.tokenizer_name, use_auth_token=args.hub_token)
     elif args.pretrained_model_name_or_path:
-        tokenizer = CLIPTokenizer.from_pretrained(args.pretrained_model_name_or_path, subfolder="tokenizer")
+        tokenizer = CLIPTokenizer.from_pretrained(args.pretrained_model_name_or_path, subfolder="tokenizer", use_auth_token=args.hub_token)
 
     # Load models and create wrapper for stable diffusion
     if args.train_only_unet:
       if os.path.exists(str(args.output_dir+"/text_encoder_trained")):
-        text_encoder = CLIPTextModel.from_pretrained(args.output_dir, subfolder="text_encoder_trained")
+        text_encoder = CLIPTextModel.from_pretrained(args.output_dir, subfolder="text_encoder_trained", use_auth_token=args.hub_token)
       elif os.path.exists(str(args.output_dir+"/text_encoder")):
-        text_encoder = CLIPTextModel.from_pretrained(args.output_dir, subfolder="text_encoder")
+        text_encoder = CLIPTextModel.from_pretrained(args.output_dir, subfolder="text_encoder", use_auth_token=args.hub_token)
       else:
-        text_encoder = CLIPTextModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="text_encoder")
+        text_encoder = CLIPTextModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="text_encoder", use_auth_token=args.hub_token)
     else:
-      text_encoder = CLIPTextModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="text_encoder")
+      text_encoder = CLIPTextModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="text_encoder", use_auth_token=args.hub_token)
+    print("using device", accelerator.device)
     
     print("loading unet")
     unet = torch.load("unet.pkl").to(accelerator.device).float()
@@ -494,7 +495,6 @@ def main():
     vae = torch.load("vae.pkl").to(accelerator.device).float()
     #vae = AutoencoderKL.from_pretrained(args.pretrained_model_name_or_path, subfolder="vae", use_auth_token=args.hub_token, device=accelerator.device).to(accelerator.device)
     #unet = UNet2DConditionModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="unet", use_auth_token=args.hub_token, device=accelerator.device).to(accelerator.device)
-    
     
     
     if hasattr(args, "unet_resume") and args.unet_resume != "" and not args.unet_resume is None:
@@ -556,6 +556,7 @@ def main():
         center_crop=args.center_crop,
         args=args,
     )
+    
 
     def collate_fn(examples):
         input_ids = [example["instance_prompt_ids"] for example in examples]
@@ -721,7 +722,7 @@ def main():
             accelerator.log(logs, step=global_step)
             if global_step >= args.save_starting_step + args.max_train_steps:
                 break
-                         
+
             if args.save_n_steps >= 1:
                if global_step % args.save_n_steps == args.save_n_steps-1:
                   ckpt_name = "step_" + str(global_step+1) + "_"
