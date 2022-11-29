@@ -521,7 +521,7 @@ def main():
     folderList = drive.ListFile({'q': query}).GetList()
     storeFolderId = None
     for f in folderList:
-      print(f['title'])
+      print("found drive folder", f['title'])
       if f['title'] == args.run_tag:
         storeFolderId = f['id']
     if storeFolderId is None:
@@ -532,7 +532,14 @@ def main():
         'parents': [{'id': rootFolderId}]
       }
       root_folder = drive.CreateFile(body).Upload()
-    
+      
+      for f in folderList:
+        print("found drive folder", f['title'])
+        if f['title'] == args.run_tag:
+          storeFolderId = f['id']
+      if storeFolderId is None:
+        raise Exception("couldn't find, help")
+     
     
     
     if hasattr(args, "unet_resume") and args.unet_resume != "" and not args.unet_resume is None:
@@ -783,8 +790,17 @@ def main():
                      unet_unwrap = accelerator.unwrap_model(unet)
                      dt = unet_unwrap.dtype
                      unet_unwrap.half()
-                     torch.save(unet_unwrap.state_dict(), str(Path(save_dir + "unet.pkl")))
+                     unetStatePath = str(Path(save_dir + "unet.pkl"))
+                     torch.save(unet_unwrap.state_dict(), unetStatePath)
                      unet_unwrap.type(dt)
+                     body = {
+                        'title': ckpt_name + "unet.pkl",
+                        'mimeType': "application/octet-stream",
+                        'parents': [{'id': storeFolderId}]
+                     }
+                     unetFile = drive.CreateFile(body)
+                     unetFile.SetContentFile(unetStatePath)
+                     unetFile.Upload()
                      #frz_dir=args.output_dir + "/text_encoder_frozen"                    
                      #if args.train_text_encoder and os.path.exists(frz_dir):
                      #   subprocess.call('rm -r '+save_dir+'/text_encoder/*.*', shell=True)
