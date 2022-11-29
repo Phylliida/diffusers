@@ -529,9 +529,9 @@ def main():
       body = {
         'title': args.run_tag,
         'mimeType': "application/vnd.google-apps.folder",
-        'parent': rootFolderId
+        'parents': [{'id': rootFolderId}]
       }
-      root_folder = drive.files().insert(body = body).execute()
+      root_folder = drive.CreateFile(body).Upload()
     
     
     
