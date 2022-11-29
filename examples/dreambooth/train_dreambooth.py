@@ -527,7 +527,7 @@ def main():
     if storeFolderId is None:
       print("couldn't find folder in gdrive, making it")
       body = {
-        'title': folderName,
+        'title': args.run_tag,
         'mimeType': "application/vnd.google-apps.folder",
         'parent': rootFolderId
       }
