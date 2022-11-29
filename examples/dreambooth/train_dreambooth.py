@@ -6,6 +6,9 @@ from pathlib import Path
 from typing import Optional
 import subprocess
 import sys
+from pydrive.auth import GoogleAuth
+from pydrive.drive import GoogleDrive
+
 
 import torch
 import torch.nn.functional as F
@@ -41,6 +44,12 @@ def parse_args():
         type=str,
         default=None,
         help="Pretrained tokenizer name or path if not the same as model_name",
+    )
+    parser.add_argument(
+        '--run_tag',
+        type=str,
+        required=True,
+        help="tag for current run"
     )
     parser.add_argument(
         "--unet_resume",
@@ -495,6 +504,35 @@ def main():
     vae = torch.load("vae.pkl").to(accelerator.device).float()
     #vae = AutoencoderKL.from_pretrained(args.pretrained_model_name_or_path, subfolder="vae", use_auth_token=args.hub_token, device=accelerator.device).to(accelerator.device)
     #unet = UNet2DConditionModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="unet", use_auth_token=args.hub_token, device=accelerator.device).to(accelerator.device)
+    
+    gauth = GoogleAuth()  
+    gauth.LoadCredentialsFile("creds.txt")
+    if gauth.access_token_expired:
+      print("Google Drive Token Expired, Refreshing")
+      gauth.Refresh()
+    else:
+      print("authorizing gdrive")
+      gauth.Authorize()
+    drive = GoogleDrive(gauth)
+
+    rootFolderId = '1DDwzHPL7NjoK79-Rv0lf5PDA2zt1HcIg'
+    query = "'{}' in parents and trashed=false"
+    query=query.format(rootFolderId)
+    folderList = drive.ListFile({'q': query}).GetList()
+    storeFolderId = None
+    for f in folderList:
+      print(f['title'])
+      if f['title'] == args.run_tag:
+        storeFolderId = f['id']
+    if storeFolderId is None:
+      print("couldn't find folder in gdrive, making it")
+      body = {
+        'title': folderName,
+        'mimeType': "application/vnd.google-apps.folder",
+        'parent': rootFolderId
+      }
+      root_folder = drive.files().insert(body = body).execute()
+    
     
     
     if hasattr(args, "unet_resume") and args.unet_resume != "" and not args.unet_resume is None:
