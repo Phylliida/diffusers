@@ -798,13 +798,19 @@ def main():
                         'mimeType': "application/octet-stream",
                         'parents': [{'id': storeFolderId}]
                      }
-                     unetFile = drive.CreateFile(body)
-                     unetFile.SetContentFile(unetStatePath)
-                     unetFile.Upload()
-                     if not prevSaved is None:
-                       os.remove(prevSaved)
-                       print("removing", prevSaved)
-                     prevSaved = unetStatePath
+                     try:
+                       unetFile = drive.CreateFile(body)
+                       unetFile.SetContentFile(unetStatePath)
+                       unetFile.Upload()
+                       prevSaved = unetStatePath
+                       if not prevSaved is None:
+                         os.remove(prevSaved)
+                         print("removing", prevSaved)
+                     except Exception as e:
+                      print(e)
+                      if type(e) is KeyboardInterrupt:
+                        raise e
+                      prevSaved = None
                      #frz_dir=args.output_dir + "/text_encoder_frozen"                    
                      #if args.train_text_encoder and os.path.exists(frz_dir):
                      #   subprocess.call('rm -r '+save_dir+'/text_encoder/*.*', shell=True)
