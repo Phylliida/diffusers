@@ -695,7 +695,7 @@ def main():
     progress_bar = tqdm(range(0, args.max_train_steps+args.save_starting_step), disable=not accelerator.is_local_main_process)
     if args.save_starting_step > 0:
       progress_bar.update(args.save_starting_step)
-    
+    prevSaved = None
     global_step = args.save_starting_step
     for epoch in range(args.save_starting_step, args.max_train_steps+args.save_starting_step):
         unet.train()
@@ -801,6 +801,10 @@ def main():
                      unetFile = drive.CreateFile(body)
                      unetFile.SetContentFile(unetStatePath)
                      unetFile.Upload()
+                     if not prevSaved is None:
+                       os.remove(prevSaved)
+                       print("removing", prevSaved)
+                     prevSaved = unetStatePath
                      #frz_dir=args.output_dir + "/text_encoder_frozen"                    
                      #if args.train_text_encoder and os.path.exists(frz_dir):
                      #   subprocess.call('rm -r '+save_dir+'/text_encoder/*.*', shell=True)
