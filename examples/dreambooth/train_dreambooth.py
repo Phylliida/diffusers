@@ -824,8 +824,6 @@ def main(discordQueue):
                      f = open("textToDo.txt", "r")
                      lines = f.read().split("\n")
                      f.close()
-                     progressUUID = str(uuid.uuid4())
-                     discordQueue.put(("send", progressUUID, CHANNEL, "step " + str(args.save_starting_step+1), None))
                      with torch.no_grad():
                       for i, prompt in enumerate(lines):
                         print("doing prompt", prompt)
@@ -838,6 +836,8 @@ def main(discordQueue):
                      
                      
                      del pipeline
+                     progressUUID = str(uuid.uuid4())
+                     discordQueue.put(("send", progressUUID, CHANNEL, "step " + str(args.save_starting_step+1), None))
                      
                      if args.store_to_drive:
                        body = {
