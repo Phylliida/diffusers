@@ -825,7 +825,7 @@ def main(discordQueue):
                      f = open("textToDo.txt", "r")
                      lines = f.read().split("\n")
                      f.close()
-                     discordQueue.put(("send", str(uuid.uuid4()), CHANNEL, "step " + str(global_step), None))
+                     discordQueue.put(("send", str(uuid.uuid4()), CHANNEL, "step " + str(global_step+1), None))
                      with torch.no_grad():
                       for i, prompt in enumerate(lines):
                         print("doing prompt", prompt)
