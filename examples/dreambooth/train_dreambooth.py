@@ -912,8 +912,7 @@ numDoingDiscordTasks = 0
 from discord.ext import tasks
 
 def discordSubtask(discordQueue):
-  
-  print("hi discord task")
+
   f = open("discordBotToken.txt", "r")
   TOKEN = f.read()
   f.close()
@@ -930,7 +929,6 @@ def discordSubtask(discordQueue):
         startedTask = True
       print(f'{client.user} has connected to Discord!')
   
-  print("made cool client")
   
   @tasks.loop(seconds=1)
   async def doDiscordTasks():
@@ -942,7 +940,6 @@ def discordSubtask(discordQueue):
       else:
         numDoingDiscordTasks = 1
     didTask = False
-    print("doing tasks")
     try:
       while not discordQueue.empty():
         didTask = True
@@ -954,7 +951,6 @@ def discordSubtask(discordQueue):
           while not discordQueue.empty():
             allTasks.append(discordQueue.get())
           channelId, contents, fileBytes = allTasks.pop(0)
-          print("got command", channelId, contents, fileBytes)
           
           messageChannel = client.get_channel(channelId)
           file = None
