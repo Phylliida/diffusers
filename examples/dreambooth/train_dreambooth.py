@@ -694,7 +694,7 @@ def main(discordQueue):
        
     CHANNEL = 1048281226001256468 
     progressUUID = str(uuid.uuid4())
-    discordQueue.put(("send", progressUUID, CHANNEL, "step " + str(global_step), None))
+    discordQueue.put(("send", progressUUID, CHANNEL, "step " + str(args.save_starting_step), None))
                      
     # Train!
     total_batch_size = args.train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
