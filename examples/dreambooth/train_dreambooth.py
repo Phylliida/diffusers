@@ -919,10 +919,12 @@ def discordSubtask(discordQueue):
   f.close()
   client = discord.Client(intents=discord.Intents.all())
   
+  global startedTask
   startedTask = False
   
   @client.event
   async def on_ready():
+      global startedTask
       if not startedTask:
         doDiscordTasks.start()
         startedTask = True
