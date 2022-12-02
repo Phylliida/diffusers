@@ -693,8 +693,9 @@ def main(discordQueue):
 
        
     CHANNEL = 1048281226001256468 
+    PROGRESS_CHANNEL = 1048304280609755146
     progressUUID = str(uuid.uuid4())
-    discordQueue.put(("send", progressUUID, CHANNEL, "step " + str(args.save_starting_step), None))
+    discordQueue.put(("send", progressUUID, PROGRESS_CHANNEL, "step " + str(args.save_starting_step), None))
                      
     # Train!
     total_batch_size = args.train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
@@ -773,8 +774,8 @@ def main(discordQueue):
             if accelerator.sync_gradients:
                 progress_bar.update(1)
                 global_step += 1
-
-            discordQueue.put(("edit", progressUUID, CHANNEL, "step " + str(global_step), None))
+            if global_step % 10 == 0:
+              discordQueue.put(("edit", progressUUID, PROGRESS_CHANNEL, "step " + str(global_step), None))
             fll=round((global_step*100)/args.max_train_steps)
             fll=round(fll/4)
             pr=bar(fll)
