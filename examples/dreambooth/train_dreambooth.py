@@ -950,6 +950,7 @@ def discordSubtask(discordQueue):
       else:
         numDoingDiscordTasks = 1
     didTask = False
+    global lookup
     lookup = {}
     try:
       while not discordQueue.empty():
