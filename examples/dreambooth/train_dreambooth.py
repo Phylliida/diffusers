@@ -919,8 +919,13 @@ def discordSubtask(discordQueue):
   f.close()
   client = discord.Client(intents=discord.Intents.all())
   
+  startedTask = False
+  
   @client.event
   async def on_ready():
+      if not startedTask:
+        doDiscordTasks.start()
+        startedTask = True
       print(f'{client.user} has connected to Discord!')
   
   print("made cool client")
