@@ -820,10 +820,10 @@ def main(discordQueue):
                      CHANNEL = 1048281226001256468 
                      discordQueue.put((CHANNEL, "step " + str(global_step), None))
                      with torch.no_grad():
-                      for prompt in lines:
+                      for i, prompt in enumerate(lines):
                         print("doing prompt", prompt)
                         pipeline.progress_bar = lambda x: x
-                        for img in pipeline([prompt], num_inference_steps=30).images:
+                        for img in pipeline([prompt], num_inference_steps=30,generator=torch.Generator("cuda").manual_seed(27+i)).images:
                           f = io.BytesIO()
                           img.save(f, "PNG")
                           f.seek(0)
