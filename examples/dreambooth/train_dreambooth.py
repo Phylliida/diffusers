@@ -513,40 +513,41 @@ def main(discordQueue):
     #vae = AutoencoderKL.from_pretrained(args.pretrained_model_name_or_path, subfolder="vae", use_auth_token=args.hub_token, device=accelerator.device).to(accelerator.device)
     #unet = UNet2DConditionModel.from_pretrained(args.pretrained_model_name_or_path, subfolder="unet", use_auth_token=args.hub_token, device=accelerator.device).to(accelerator.device)
     
-    gauth = GoogleAuth()  
-    gauth.LoadCredentialsFile("creds.txt")
-    if gauth.access_token_expired:
-      print("Google Drive Token Expired, Refreshing")
-      gauth.Refresh()
-    else:
-      print("authorizing gdrive")
-      gauth.Authorize()
-    drive = GoogleDrive(gauth)
+    if args.store_to_drive:
+      gauth = GoogleAuth()  
+      gauth.LoadCredentialsFile("creds.txt")
+      if gauth.access_token_expired:
+        print("Google Drive Token Expired, Refreshing")
+        gauth.Refresh()
+      else:
+        print("authorizing gdrive")
+        gauth.Authorize()
+      drive = GoogleDrive(gauth)
 
-    rootFolderId = '1DDwzHPL7NjoK79-Rv0lf5PDA2zt1HcIg'
-    query = "'{}' in parents and trashed=false"
-    query=query.format(rootFolderId)
-    folderList = drive.ListFile({'q': query}).GetList()
-    storeFolderId = None
-    for f in folderList:
-      print("found drive folder", f['title'])
-      if f['title'] == args.run_tag:
-        storeFolderId = f['id']
-    if storeFolderId is None:
-      print("couldn't find folder in gdrive, making it")
-      body = {
-        'title': args.run_tag,
-        'mimeType': "application/vnd.google-apps.folder",
-        'parents': [{'id': rootFolderId}]
-      }
-      root_folder = drive.CreateFile(body).Upload()
-      
+      rootFolderId = '1DDwzHPL7NjoK79-Rv0lf5PDA2zt1HcIg'
+      query = "'{}' in parents and trashed=false"
+      query=query.format(rootFolderId)
+      folderList = drive.ListFile({'q': query}).GetList()
+      storeFolderId = None
       for f in folderList:
         print("found drive folder", f['title'])
         if f['title'] == args.run_tag:
           storeFolderId = f['id']
       if storeFolderId is None:
-        raise Exception("couldn't find, help")
+        print("couldn't find folder in gdrive, making it")
+        body = {
+          'title': args.run_tag,
+          'mimeType': "application/vnd.google-apps.folder",
+          'parents': [{'id': rootFolderId}]
+        }
+        root_folder = drive.CreateFile(body).Upload()
+        
+        for f in folderList:
+          print("found drive folder", f['title'])
+          if f['title'] == args.run_tag:
+            storeFolderId = f['id']
+        if storeFolderId is None:
+          raise Exception("couldn't find, help")
      
     
     
@@ -817,7 +818,7 @@ def main(discordQueue):
                      with torch.no_grad():
                       for prompt in lines:
                         print("doing prompt", prompt)
-                        for img in pipeline([prompt], num_inference_steps=30):
+                        for img in pipeline([prompt], num_inference_steps=30).images:
                           f = io.BytesIO()
                           img.save(f, "PNG")
                           f.seek(0)
