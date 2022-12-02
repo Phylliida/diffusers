@@ -908,13 +908,8 @@ numDoingDiscordTasks = 0
 
 from discord.ext import tasks
 
+def discordSubtask(discordQueue):
     
-    
-if __name__ == "__main__":
-  discordQueue = multiprocessing.Queue()
-  aiProcess = multiprocessing.Process(target=main, args=(discordQueue,))
-  aiProcess.start()
-  
   f = open("discordBotToken.txt", "r")
   TOKEN = f.read()
   f.close()
@@ -966,3 +961,9 @@ if __name__ == "__main__":
         
   
   client.run(TOKEN)
+    
+if __name__ == "__main__":
+  discordQueue = multiprocessing.Queue()
+  aiProcess = multiprocessing.Process(target=discordSubtask, args=(discordQueue,))
+  aiProcess.start()
+  main(discordQueue)
