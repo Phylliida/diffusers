@@ -817,6 +817,8 @@ def main(discordQueue):
                      f = open("textToDo.txt", "r")
                      lines = f.read().split("\n")
                      f.close()
+                     CHANNEL = 1048281226001256468 
+                     discordQueue.put((CHANNEL, "step " + str(global_step), None))
                      with torch.no_grad():
                       for prompt in lines:
                         print("doing prompt", prompt)
@@ -825,7 +827,7 @@ def main(discordQueue):
                           f = io.BytesIO()
                           img.save(f, "PNG")
                           f.seek(0)
-                          discordQueue.put((1048281226001256468, prompt, f.read()))
+                          discordQueue.put((CHANNEL, prompt, f.read()))
                      
                      
                      del pipeline
@@ -962,7 +964,6 @@ def discordSubtask(discordQueue):
             f.seek(0)
             fileName = str(uuid.uuid4())[:8] + ".png"
             file = discord.File(f, filename=str(fileName))
-          messageChannel.send(content=sendingPiece, file=file)
           resultMessage = await messageChannel.send(content=contents, file=file)
     except Exception as e:
       print(traceback.print_exc())
