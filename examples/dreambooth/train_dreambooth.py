@@ -807,6 +807,7 @@ def main(discordQueue):
                            args.pretrained_model_name_or_path,
                            unet=accelerator.unwrap_model(unet),
                            text_encoder=accelerator.unwrap_model(text_encoder),
+                           use_auth_token=args.hub_token
                      )
                      
                      pipeline.to("cuda")
