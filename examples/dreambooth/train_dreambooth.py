@@ -356,7 +356,7 @@ class DreamBoothDataset(Dataset):
             pt=pt.replace("_"," ")
             pt=pt.replace("(","")
             pt=pt.replace(")","")
-            instance_prompt = pt
+            instance_prompt = self.instance_prompt + " " + pt
             #sys.stdout.write(" [0;32m" +instance_prompt+" [0m")
             #sys.stdout.flush()
 
