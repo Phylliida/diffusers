@@ -939,7 +939,8 @@ def discordSubtask(discordQueue):
         startedTask = True
       print(f'{client.user} has connected to Discord!')
   
-  
+  global lookup
+  lookup = {}
   @tasks.loop(seconds=1)
   async def doDiscordTasks():
     global numDoingDiscordTasks
@@ -951,7 +952,6 @@ def discordSubtask(discordQueue):
         numDoingDiscordTasks = 1
     didTask = False
     global lookup
-    lookup = {}
     try:
       while not discordQueue.empty():
         didTask = True
