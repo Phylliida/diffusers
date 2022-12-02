@@ -912,11 +912,18 @@ numDoingDiscordTasks = 0
 from discord.ext import tasks
 
 def discordSubtask(discordQueue):
-    
+  
+  print("hi discord task")
   f = open("discordBotToken.txt", "r")
   TOKEN = f.read()
   f.close()
   client = discord.Client(intents=discord.Intents.all())
+  
+  @client.event
+  async def on_ready():
+      print(f'{client.user} has connected to Discord!')
+  
+  print("made cool client")
   
   @tasks.loop(seconds=1)
   async def doDiscordTasks():
