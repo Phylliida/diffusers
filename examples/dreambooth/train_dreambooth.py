@@ -691,6 +691,11 @@ def main(discordQueue):
        br='|'+'█' * prg + ' ' * (25-prg)+'|'
        return br
 
+       
+    CHANNEL = 1048281226001256468 
+    progressUUID = str(uuid.uuid4())
+    discordQueue.put(("send", progressUUID, CHANNEL, "step " + str(global_step), None))
+                     
     # Train!
     total_batch_size = args.train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
 
@@ -714,6 +719,7 @@ def main(discordQueue):
             text_encoder.train()
         for step, batch in enumerate(train_dataloader):
             with accelerator.accumulate(unet):
+                
                 # Convert images to latent space
                 latents = vae.encode(batch["pixel_values"].to(dtype=weight_dtype)).latent_dist.sample()
                 latents = latents * 0.18215
@@ -768,6 +774,7 @@ def main(discordQueue):
                 progress_bar.update(1)
                 global_step += 1
 
+            discordQueue.put(("edit", progressUUID, CHANNEL, "step " + str(global_step), None))
             fll=round((global_step*100)/args.max_train_steps)
             fll=round(fll/4)
             pr=bar(fll)
@@ -817,8 +824,7 @@ def main(discordQueue):
                      f = open("textToDo.txt", "r")
                      lines = f.read().split("\n")
                      f.close()
-                     CHANNEL = 1048281226001256468 
-                     discordQueue.put((CHANNEL, "step " + str(global_step), None))
+                     discordQueue.put(("send", str(uuid.uuid4()), CHANNEL, "step " + str(global_step), None))
                      with torch.no_grad():
                       for i, prompt in enumerate(lines):
                         print("doing prompt", prompt)
@@ -827,7 +833,7 @@ def main(discordQueue):
                           f = io.BytesIO()
                           img.save(f, "PNG")
                           f.seek(0)
-                          discordQueue.put((CHANNEL, prompt, f.read()))
+                          discordQueue.put(("send", str(uuid.uuid4()), CHANNEL, prompt, f.read()))
                      
                      
                      del pipeline
@@ -944,6 +950,7 @@ def discordSubtask(discordQueue):
       else:
         numDoingDiscordTasks = 1
     didTask = False
+    lookup = {}
     try:
       while not discordQueue.empty():
         didTask = True
@@ -954,9 +961,9 @@ def discordSubtask(discordQueue):
         while(len(allTasks) > 0):
           while not discordQueue.empty():
             allTasks.append(discordQueue.get())
-          channelId, contents, fileBytes = allTasks.pop(0)
+            
           
-          messageChannel = client.get_channel(channelId)
+          command, messageUUID, channelId, contents, fileBytes = allTasks.pop(0)
           file = None
           if not fileBytes is None:
             f = io.BytesIO()
@@ -964,7 +971,26 @@ def discordSubtask(discordQueue):
             f.seek(0)
             fileName = str(uuid.uuid4())[:8] + ".png"
             file = discord.File(f, filename=str(fileName))
-          resultMessage = await messageChannel.send(content=contents, file=file)
+          
+          if command == 'send':
+            messageChannel = client.get_channel(channelId)
+            resultMessage = await messageChannel.send(content=contents, file=file)
+            lookup[messageUUID] = resultMessage.id
+          elif command == 'edit':
+            otherEdits = False
+            for t in allTasks:
+              if t[0] == 'edit':
+                otherEdits = True
+                break
+            if otherEdits: # if lots of edits are queued up, ignore
+              continue
+            messageChannel = client.get_channel(channelId)
+            messageId = lookup[messageUUID]
+            messageChannel = client.get_channel(channelId)
+            messageToEdit = await messageChannel.fetch_message(messageId)
+            await messageToEdit.edit(content=contents, file=file)
+          else:
+            raise Exception("unknown command " + str(command))
     except Exception as e:
       print(traceback.print_exc())
       print("tasks got exception", e)
