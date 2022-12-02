@@ -809,7 +809,6 @@ def main(discordQueue):
                      )
                      
                      pipeline.to("cuda")
-                     
                      f = open("textToDo.txt", "r")
                      lines = f.read().split("\n")
                      f.close()
@@ -823,6 +822,7 @@ def main(discordQueue):
                           discordQueue.put((1048281226001256468, prompt, f.read()))
                      
                      
+                     del pipeline
                      
                      if args.store_to_drive:
                        body = {
