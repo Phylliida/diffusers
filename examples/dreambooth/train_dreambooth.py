@@ -911,7 +911,7 @@ from discord.ext import tasks
     
     
 if __name__ == "__main__":
-  discordQueue = Queue()
+  discordQueue = multiprocessing.Queue()
   aiProcess = multiprocessing.Process(target=main, args=(discordQueue,))
   aiProcess.start()
   
