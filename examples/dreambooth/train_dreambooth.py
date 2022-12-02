@@ -818,6 +818,7 @@ def main(discordQueue):
                      with torch.no_grad():
                       for prompt in lines:
                         print("doing prompt", prompt)
+                        pipeline.progress_bar = lambda x: x
                         for img in pipeline([prompt], num_inference_steps=30).images:
                           f = io.BytesIO()
                           img.save(f, "PNG")
@@ -927,6 +928,7 @@ def discordSubtask(discordQueue):
       else:
         numDoingDiscordTasks = 1
     didTask = False
+    print("doing tasks")
     try:
       while not discordQueue.empty():
         didTask = True
@@ -966,6 +968,6 @@ def discordSubtask(discordQueue):
     
 if __name__ == "__main__":
   discordQueue = multiprocessing.Queue()
-  aiProcess = multiprocessing.Process(target=discordSubtask, args=(discordQueue,))
-  aiProcess.start()
+  discordProcess = multiprocessing.Process(target=discordSubtask, args=(discordQueue,))
+  discordProcess.start()
   main(discordQueue)
