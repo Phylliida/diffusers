@@ -8,6 +8,7 @@ import subprocess
 import sys
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
+import multiprocessing
 
 
 import torch
@@ -49,6 +50,12 @@ def parse_args():
         '--run_tag',
         type=str,
         required=True,
+        help="tag for current run"
+    )
+    parser.add_argument(
+        '--store_to_drive',
+        default=False,
+        action="store_true",
         help="tag for current run"
     )
     parser.add_argument(
@@ -350,8 +357,8 @@ class DreamBoothDataset(Dataset):
             pt=pt.replace("(","")
             pt=pt.replace(")","")
             instance_prompt = pt
-            sys.stdout.write(" [0;32m" +instance_prompt+" [0m")
-            sys.stdout.flush()
+            #sys.stdout.write(" [0;32m" +instance_prompt+" [0m")
+            #sys.stdout.flush()
 
 
         example["instance_images"] = self.image_transforms(instance_image)
@@ -405,7 +412,7 @@ def get_full_repo_name(model_id: str, organization: Optional[str] = None, token:
         return f"{organization}/{model_id}"
 
 
-def main():
+def main(discordQueue):
     args = parse_args()
     logging_dir = Path(args.output_dir, args.logging_dir)
     i=args.save_starting_step
@@ -768,6 +775,7 @@ def main():
             if global_step >= args.save_starting_step + args.max_train_steps:
                 break
 
+                
             if args.save_n_steps >= 1:
                if global_step % args.save_n_steps == args.save_n_steps-1:
                   ckpt_name = "step_" + str(global_step+1) + "_"
@@ -793,24 +801,49 @@ def main():
                      unetStatePath = str(Path(save_dir + "unet.pkl"))
                      torch.save(unet_unwrap.state_dict(), unetStatePath)
                      unet_unwrap.type(dt)
-                     body = {
-                        'title': ckpt_name + "unet.pkl",
-                        'mimeType': "application/octet-stream",
-                        'parents': [{'id': storeFolderId}]
-                     }
-                     try:
-                       unetFile = drive.CreateFile(body)
-                       unetFile.SetContentFile(unetStatePath)
-                       unetFile.Upload()
-                       prevSaved = unetStatePath
-                       if not prevSaved is None:
-                         os.remove(prevSaved)
-                         print("removing", prevSaved)
-                     except Exception as e:
-                      print(e)
-                      if type(e) is KeyboardInterrupt:
-                        raise e
-                      prevSaved = None
+                     
+                     pipeline = StableDiffusionPipeline.from_pretrained(
+                           args.pretrained_model_name_or_path,
+                           unet=accelerator.unwrap_model(unet),
+                           text_encoder=accelerator.unwrap_model(text_encoder),
+                     )
+                     
+                     pipeline.to("cuda")
+                     
+                     f = open("textToDo.txt", "r")
+                     lines = f.read().split("\n")
+                     f.close()
+                     with torch.no_grad():
+                      for prompt in lines:
+                        print("doing prompt", prompt)
+                        for img in pipeline([prompt]):
+                          f = io.BytesIO()
+                          img.save(f, "PNG")
+                          f.seek(0)
+                          discordQueue.put((1048281226001256468, prompt, f.read()))
+                     
+                     
+                     
+                     if args.store_to_drive:
+                       body = {
+                          'title': ckpt_name + "unet.pkl",
+                          'mimeType': "application/octet-stream",
+                          'parents': [{'id': storeFolderId}]
+                       }
+                       
+                       try:
+                         unetFile = drive.CreateFile(body)
+                         unetFile.SetContentFile(unetStatePath)
+                         unetFile.Upload()
+                         prevSaved = unetStatePath
+                         if not prevSaved is None:
+                           os.remove(prevSaved)
+                           print("removing", prevSaved)
+                       except Exception as e:
+                        print(e)
+                        if type(e) is KeyboardInterrupt:
+                          raise e
+                        prevSaved = None
                      #frz_dir=args.output_dir + "/text_encoder_frozen"                    
                      #if args.train_text_encoder and os.path.exists(frz_dir):
                      #   subprocess.call('rm -r '+save_dir+'/text_encoder/*.*', shell=True)
@@ -864,5 +897,71 @@ def main():
 
     accelerator.end_training()
 
+    
+doingDiscordTasksLock = threading.Lock()
+global numDoingDiscordTasks
+
+discordQueueLock = threading.Lock()
+
+numDoingDiscordTasks = 0
+
+from discord.ext import tasks
+
+    
+    
 if __name__ == "__main__":
-    main()
+  discordQueue = Queue()
+  aiProcess = multiprocessing.Process(target=main, args=(discordQueue,))
+  aiProcess.start()
+  
+  f = open("discordBotToken.txt", "r")
+  TOKEN = f.read()
+  f.close()
+  client = discord.Client(intents=discord.Intents.all())
+  
+  @tasks.loop(seconds=1)
+  async def doDiscordTasks():
+    global numDoingDiscordTasks
+    with doingDiscordTasksLock:
+      if numDoingDiscordTasks > 1:
+        print("someone already doing tasks, don't do them")
+        return
+      else:
+        numDoingDiscordTasks = 1
+    didTask = False
+    try:
+      while not discordQueue.empty():
+        didTask = True
+        allTasks = []
+        while not discordQueue.empty():
+          allTasks.append(discordQueue.get())
+        
+        while(len(allTasks) > 0):
+          while not discordQueue.empty():
+            allTasks.append(discordQueue.get())
+          channelId, contents, fileBytes = allTasks.pop(0)
+          print("got command", channelId, contents, fileBytes)
+          
+          messageChannel = client.get_channel(channelId)
+          file = None
+          if not fileBytes is None:
+            f = io.BytesIO()
+            f.write(fileBytes)
+            f.seek(0)
+            fileName = str(uuid.uuid4())[:8] + ".png"
+            file = discord.File(f, filename=str(fileName))
+          messageChannel.send(content=sendingPiece, file=file)
+          resultMessage = await messageChannel.send(content=contents, file=file)
+    except Exception as e:
+      print(traceback.print_exc())
+      print("tasks got exception", e)
+      if type(e) is KeyboardInterrupt:
+          raise e
+      pass
+    with doingDiscordTasksLock:
+      #if didTask:
+      #  print("finished doing discord tasks")
+      numDoingDiscordTasks = 0
+        
+  
+  client.run(TOKEN)
