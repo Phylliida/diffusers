@@ -11,6 +11,8 @@ from pydrive.drive import GoogleDrive
 import multiprocessing
 import threading
 import discord
+import uuid
+import traceback
 
 import torch
 import torch.nn.functional as F
