@@ -727,7 +727,6 @@ def main(discordQueue):
                 # Sample noise that we'll add to the latents
                 noise = torch.randn_like(latents)
                 bsz = latents.shape[0]
-                print("latents", latents.size())
                 # Sample a random timestep for each image
                 timesteps = torch.randint(0, noise_scheduler.config.num_train_timesteps, (bsz,), device=latents.device)
                 timesteps = timesteps.long()
@@ -829,7 +828,7 @@ def main(discordQueue):
                       for i, prompt in enumerate(lines):
                         print("doing prompt", prompt)
                         pipeline.progress_bar = lambda x: x
-                        for img in pipeline([prompt], num_inference_steps=30,generator=torch.Generator("cuda").manual_seed(27+i)).images:
+                        for img in pipeline([prompt], num_inference_steps=30,generator=torch.Generator("cuda").manual_seed(27+i), height=args.resolution, width=args.resolution).images:
                           f = io.BytesIO()
                           img.save(f, "PNG")
                           f.seek(0)
