@@ -722,6 +722,9 @@ def main(discordQueue):
                 
                 # Convert images to latent space
                 latents = vae.encode(batch["pixel_values"].to(dtype=weight_dtype)).latent_dist.sample()
+                #h = batch["pixel_values"].to(dtype=weight_dtype)
+                #latents = (h - torch.mean(h))/torch.sqrt(torch.var(h))*torch.sqrt(torch.var(latents))
+                
                 latents = latents * 0.18215
 
                 # Sample noise that we'll add to the latents
@@ -831,6 +834,10 @@ def main(discordQueue):
                         for img in pipeline([prompt], num_inference_steps=30,generator=torch.Generator("cuda").manual_seed(27+i), height=args.resolution, width=args.resolution).images:
                           f = io.BytesIO()
                           img.save(f, "PNG")
+                          f.seek(0)
+                          discordQueue.put(("send", str(uuid.uuid4()), CHANNEL, prompt, f.read()))
+                          f = io.BytesIO()
+                          img.resize((16,16), resample=Image.NEAREST).resize((512,512), resample=Image.NEAREST).save(f, "PNG")
                           f.seek(0)
                           discordQueue.put(("send", str(uuid.uuid4()), CHANNEL, prompt, f.read()))
                      
