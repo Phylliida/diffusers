@@ -850,10 +850,10 @@ def main(discordQueue):
                          unetFile = drive.CreateFile(body)
                          unetFile.SetContentFile(unetStatePath)
                          unetFile.Upload()
-                         prevSaved = unetStatePath
                          if not prevSaved is None:
                            os.remove(prevSaved)
                            print("removing", prevSaved)
+                         prevSaved = unetStatePath
                        except Exception as e:
                         print(e)
                         if type(e) is KeyboardInterrupt:
