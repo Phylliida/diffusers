@@ -287,7 +287,9 @@ def parse_args():
 
     return args
 
+global instanceLabelLookup
 
+    
 class DreamBoothDataset(Dataset):
     """
     A dataset to prepare the instance and class images with the prompts for fine-tuning the model.
@@ -352,8 +354,12 @@ class DreamBoothDataset(Dataset):
             instance_image = instance_image.convert("RGB")
             
         instance_prompt = self.instance_prompt
+        global instanceLabelLookup
         
         if self.image_captions_filename:
+            filename = Path(path).stem.split(".")[0]
+            instance_prompt = instanceLabelLookup[filename]
+            '''
             filename = Path(path).stem
             pt=''.join([i for i in filename if not i.isdigit()])
             pt=pt.replace("_"," ")
@@ -362,6 +368,7 @@ class DreamBoothDataset(Dataset):
             instance_prompt = self.instance_prompt + " " + pt
             #sys.stdout.write(" [0;32m" +instance_prompt+" [0m")
             #sys.stdout.flush()
+            '''
 
 
         example["instance_images"] = self.image_transforms(instance_image)
@@ -417,6 +424,12 @@ def get_full_repo_name(model_id: str, organization: Optional[str] = None, token:
 
 def main(discordQueue):
     args = parse_args()
+    
+    global instanceLabelLookup
+    f = open(args.instance_data_dir + "/allDescriptions.json", "r")
+    instanceLabelLookup = json.load(f)
+    f.close()
+    
     logging_dir = Path(args.output_dir, args.logging_dir)
     i=args.save_starting_step
     accelerator = Accelerator(
