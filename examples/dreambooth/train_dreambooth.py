@@ -852,7 +852,7 @@ def main(discordQueue):
                           f.seek(0)
                           discordQueue.put(("send", str(uuid.uuid4()), CHANNEL, prompt, f.read()))
                           f = io.BytesIO()
-                          img.resize((16,16), resample=Image.NEAREST).resize((512,512), resample=Image.NEAREST).save(f, "PNG")
+                          img.resize((64,64), resample=Image.NEAREST).resize((256,256), resample=Image.NEAREST).save(f, "PNG")
                           f.seek(0)
                           discordQueue.put(("send", str(uuid.uuid4()), CHANNEL, prompt, f.read()))
                      
