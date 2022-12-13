@@ -360,17 +360,17 @@ class DreamBoothDataset(Dataset):
         
         if self.image_captions_filename:
             filename = Path(path).stem.split(".")[0]
-            instance_prompt = instanceLabelLookup[filename]
-            '''
-            filename = Path(path).stem
-            pt=''.join([i for i in filename if not i.isdigit()])
-            pt=pt.replace("_"," ")
-            pt=pt.replace("(","")
-            pt=pt.replace(")","")
-            instance_prompt = self.instance_prompt + " " + pt
-            #sys.stdout.write(" [0;32m" +instance_prompt+" [0m")
-            #sys.stdout.flush()
-            '''
+            if not instanceLabelLookup is None:
+              instance_prompt = instanceLabelLookup[filename]
+            else:
+              filename = Path(path).stem
+              pt=''.join([i for i in filename if not i.isdigit()])
+              pt=pt.replace("_"," ")
+              pt=pt.replace("(","")
+              pt=pt.replace(")","")
+              instance_prompt = self.instance_prompt + " " + pt
+              #sys.stdout.write(" [0;32m" +instance_prompt+" [0m")
+              #sys.stdout.flush()
 
 
         example["instance_images"] = self.image_transforms(instance_image)
@@ -428,9 +428,12 @@ def main(discordQueue):
     args = parse_args()
     
     global instanceLabelLookup
-    f = open(args.instance_data_dir + "/allDescriptions.json", "r")
-    instanceLabelLookup = json.load(f)
-    f.close()
+    instanceLabelLookup = None
+    
+    if args.use_instance_label_lookup:
+      f = open(args.instance_data_dir + "/allDescriptions.json", "r")
+      instanceLabelLookup = json.load(f)
+      f.close()
     
     logging_dir = Path(args.output_dir, args.logging_dir)
     i=args.save_starting_step
@@ -602,9 +605,23 @@ def main(discordQueue):
     else:
         optimizer_class = torch.optim.AdamW
 
-    params_to_optimize = (
-        itertools.chain(unet.parameters(), text_encoder.parameters()) if args.train_text_encoder else unet.parameters()
-    )
+    input_ids = tokenizer(
+        args.instance_prompt,
+        padding="do_not_pad",
+        truncation=True,
+        max_length=self.tokenizer.model_max_length,
+    ).input_ids
+    starting = tokenizer.pad({"input_ids": input_ids}, padding=True, return_tensors="pt").input_ids
+        
+    encoder_hidden_states = text_encoder(starting)[0]
+    
+    print(encoder_hidden_states.size())
+        
+    #params_to_optimize = (
+    #    itertools.chain(unet.parameters(), text_encoder.parameters()) if args.train_text_encoder else unet.parameters()
+    #)
+    
+    params_to_optimize = (encoder_hidden_states,)
     optimizer = optimizer_class(
         params_to_optimize,
         lr=args.learning_rate,
@@ -612,6 +629,8 @@ def main(discordQueue):
         weight_decay=args.adam_weight_decay,
         eps=args.adam_epsilon,
     )
+    allEmbedWeights = text_encoder.embeddings.token_embedding.weight
+    norms = torch.linalg.norm(allEmbedWeights, dim=1, ord=2)**2
 
     noise_scheduler = DDPMScheduler(
         beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear", num_train_timesteps=1000
@@ -754,7 +773,7 @@ def main(discordQueue):
                 noisy_latents = noise_scheduler.add_noise(latents, noise, timesteps)
 
                 # Get the text embedding for conditioning
-                encoder_hidden_states = text_encoder(batch["input_ids"])[0]
+                #encoder_hidden_states = text_encoder(batch["input_ids"])[0]
 
                 # Predict the noise residual
                 noise_pred = unet(noisy_latents, timesteps, encoder_hidden_states).sample
@@ -786,6 +805,32 @@ def main(discordQueue):
                 optimizer.step()
                 lr_scheduler.step()
                 optimizer.zero_grad()
+                
+                STARTOFTEXT = tokenizer._convert_token_to_id("<|startoftext|>")
+                ENDOFTEXT = tokenizer._convert_token_to_id("<|endoftext|>")
+                embedInds = []
+                for v in range(encoder_hidden_states.size()[1]):
+                  vec = encoder_hidden_states[:,v].view(1, -1)
+                  # x*x = norm_2(x)**2, so divide by 2 norm to get similiary
+                  dots = torch.sum(vec*allEmbedWeights, axis=1)
+                  bestEmbedInd = torch.argmax(dots)
+                  bestEmbedRanked = torch.argsort(-dots)
+                  topKInds = [int(i) for i in bestEmbedRanked[0:10] if not int(i) in [STARTOFTEXT, ENDOFTEXT]]
+                  if int(bestEmbedInd) in [STARTOFTEXT, ENDOFTEXT]:
+                    topKInds = []
+                  topKInds = [(tokenizer._convert_id_to_token(i), float(dots[i])/float(norms[i])) for i in topKInds]
+                  bestEmbed = text_encoder.embeddings.token_embedding(bestEmbedInd)
+                  diff = torch.sum(bestEmbed.view(1,-1)*vec)/norms[bestEmbedInd]
+                  embedInds.append((int(bestEmbedInd), float(diff), str(topKInds))) 
+                  #if t%discretePer == (discretePer-1):
+                  #  encoder_hidden_states.data[:,v] = bestEmbed
+                lastNonEndOfText = 0
+                for i, (tok,w,h) in enumerate(embedInds):
+                  if tok != ENDOFTEXT:
+                    lastNonEndOfText = i
+                for (i,w,h) in embedInds[:lastNonEndOfText+2]:
+                  print(tokenizer._convert_id_to_token(int(i)) + " " + str(w) + " " + str(h))
+                print()
 
             # Checks if the accelerator has performed an optimization step behind the scenes
             if accelerator.sync_gradients:
