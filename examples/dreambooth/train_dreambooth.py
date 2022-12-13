@@ -254,6 +254,13 @@ def parse_args():
     )
 
     parser.add_argument(
+        '--use_instance_label_lookup',
+        action="store_true",
+        default=False,        
+        help="Use json file to lookup labels",
+    )
+    
+    parser.add_argument(
         "--train_only_unet",
         action="store_true",
         default=False,        
