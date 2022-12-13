@@ -385,7 +385,7 @@ class DreamBoothDataset(Dataset):
             instance_prompt,
             padding="do_not_pad",
             truncation=True,
-            max_length=self.tokenizer.model_max_length,
+            max_length=tokenizer.model_max_length,
         ).input_ids
 
         if self.class_data_root:
