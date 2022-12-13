@@ -636,7 +636,7 @@ def main(discordQueue):
         weight_decay=args.adam_weight_decay,
         eps=args.adam_epsilon,
     )
-    allEmbedWeights = text_encoder.embeddings.token_embedding.weight
+    allEmbedWeights = text_encoder.text_model.embeddings.token_embedding.weight
     norms = torch.linalg.norm(allEmbedWeights, dim=1, ord=2)**2
 
     noise_scheduler = DDPMScheduler(
@@ -826,7 +826,7 @@ def main(discordQueue):
                   if int(bestEmbedInd) in [STARTOFTEXT, ENDOFTEXT]:
                     topKInds = []
                   topKInds = [(tokenizer._convert_id_to_token(i), float(dots[i])/float(norms[i])) for i in topKInds]
-                  bestEmbed = text_encoder.embeddings.token_embedding(bestEmbedInd)
+                  bestEmbed = text_encoder.text_model.embeddings.token_embedding(bestEmbedInd)
                   diff = torch.sum(bestEmbed.view(1,-1)*vec)/norms[bestEmbedInd]
                   embedInds.append((int(bestEmbedInd), float(diff), str(topKInds))) 
                   #if t%discretePer == (discretePer-1):
