@@ -614,7 +614,7 @@ def main(discordQueue):
 
     input_ids = tokenizer(
         args.instance_prompt,
-        padding="do_not_pad",
+        padding="max_length",
         truncation=True,
         max_length=tokenizer.model_max_length,
     ).input_ids
