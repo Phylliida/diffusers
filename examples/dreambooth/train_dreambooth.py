@@ -619,6 +619,7 @@ def main(discordQueue):
         max_length=tokenizer.model_max_length,
     ).input_ids
     starting = tokenizer.pad({"input_ids": input_ids}, padding=True, return_tensors="pt").input_ids
+    print(starting)
         
     encoder_hidden_states = text_encoder(starting)[0]
     
