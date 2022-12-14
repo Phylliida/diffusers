@@ -638,15 +638,16 @@ def main(discordQueue):
         
     encoder_hidden_states = text_encoder(starting)[0]
     
-    input_ids = tokenizer([text], padding='max_length', max_length=pipe.tokenizer.model_max_length, truncation=True, return_tensors='pt')['input_ids'].to("cuda")
     # we want gradients of embeddings only
     if text_embeddings is None:
-      text_embeddings = text_encoder.text_model.embeddings.token_embedding(input_ids).view(77, 768)
-    batch, seqLen, embedDim = text_embeddings.size()
+      text_embeddings = text_encoder.text_model.embeddings.token_embedding(starting).view(77, 768)
+    seqLen, embedDim = text_embeddings.size()
     position_ids = text_encoder.text_model.embeddings.position_ids[:, :seqLen]
     position_embeddings = text_encoder.text_model.embeddings.position_embedding(position_ids).view(77, 768)
     
     wrappersss = SimpleWrapper(text_embeddings, position_embeddings).to(accelerator.device)
+    for p in wrappersss.parameters():
+      print(p)
     
     #print(encoder_hidden_states.size())
         
@@ -809,6 +810,7 @@ def main(discordQueue):
                 encoder_hidden_states = text_encoder(batch["input_ids"])[0]
                 
                 encoder_hidden_statesf = wrappersss(encoder_hidden_states.float())
+                encoder_hidden_states = wrappersss.learningEmbeddings.data.view(1, 77, -1)
 
                 # Predict the noise residual
                 noise_pred = unet(noisy_latents, timesteps, encoder_hidden_statesf).sample
