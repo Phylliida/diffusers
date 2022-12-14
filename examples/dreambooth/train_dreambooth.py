@@ -634,7 +634,7 @@ def main(discordQueue):
         
     #encoder_hidden_states = text_encoder(starting)[0].to('cuda').clone().detach().requires_grad_(True)
     
-    wrappersss = SimpleWrapper()
+    wrappersss = SimpleWrapper().to("cuda")
     
     #print(encoder_hidden_states.size())
         
