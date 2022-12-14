@@ -434,9 +434,9 @@ def get_full_repo_name(model_id: str, organization: Optional[str] = None, token:
 class SimpleWrapper(torch.nn.Module):
   def __init__(self, input_ids, learningEmbeddings, posEmbeddings):
     super().__init__()
-    initial = torch.zeros([77, 49408])
-    for i, ind in enumerate(input_ids.view(-1)):
-      initial[i, ind] = 1.0
+    initial = torch.ones([77, 49408])
+    #for i, ind in enumerate(input_ids.view(-1)):
+    #  initial[i, ind] = 1.0
     self.softmaxEmbeddings = torch.nn.Parameter(initial)
     
     #self.learningEmbeddings = torch.nn.Parameter(learningEmbeddings)
