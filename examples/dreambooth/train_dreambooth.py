@@ -813,7 +813,7 @@ def main(discordQueue):
                 encoder_hidden_states = text_encoder(batch["input_ids"])[0]
                 
                 encoder_hidden_statesf = wrappersss(encoder_hidden_states.float())
-                encoder_hidden_states = wrappersss.learnedEmbeddings()
+                encoder_hidden_states = wrappersss.learnedEmbeddings().view(1, 77, -1)
 
                 # Predict the noise residual
                 noise_pred = unet(noisy_latents, timesteps, encoder_hidden_statesf).sample
@@ -873,7 +873,7 @@ def main(discordQueue):
                   if tok != ENDOFTEXT:
                     lastNonEndOfText = i
                 for (i,w,h) in embedInds[:lastNonEndOfText+2]:
-                  print(tokenizer._convert_id_to_token(int(i)) + " " + str(w) + " " + str(h))
+                  print(tokenizer._convert_id_to_token(int(i)) + " " + str(w) + " " + str(h[:2]))
                 
                 print("\n".join([tokenizer._convert_id_to_token(int(i)) for (i,w,h) in embedInds[:lastNonEndOfText+2]]))
 
