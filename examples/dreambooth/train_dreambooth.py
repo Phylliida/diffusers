@@ -449,8 +449,8 @@ class SimpleWrapper(torch.nn.Module):
     return torch.concatenate([self.layer1[i](self.learningEmbeddings[i]).view(1, -1) for i in range(77)], dim=0)
     
   def forward(self, inputs, text_encoder):
-    weights = torch.softmax(self.softmaxEmbeddings, dim=1)
-    output = torch.einsum('i j, j k -> i k', weights, text_encoder.text_model.embeddings.token_embedding.weight)
+    weights = torch.softmax(self.softmaxEmbeddings.to(inputs.dtype), dim=1)
+    output = torch.einsum('i j, j k -> i k', weights, text_encoder.text_model.embeddings.token_embedding.weight.to(inputs.dtype))
     b = inputs.size()[0]
     return torch.concatenate([output.view(1, 77, -1)]*b, dim=0)
     return torch.concatenate([self.learningEmbeddings.view(1, 77, -1)]*b, dim=0)
