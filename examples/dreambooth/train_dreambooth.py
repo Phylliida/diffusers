@@ -799,7 +799,7 @@ def main(discordQueue):
                 # Get the text embedding for conditioning
                 encoder_hidden_states = text_encoder(batch["input_ids"])[0]
                 
-                encoder_hidden_states = wrappersss(encoder_hidden_states.float())
+                #encoder_hidden_states = wrappersss(encoder_hidden_states.float())
 
                 # Predict the noise residual
                 noise_pred = unet(noisy_latents, timesteps, encoder_hidden_states).sample
