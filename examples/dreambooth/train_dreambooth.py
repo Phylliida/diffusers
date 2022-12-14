@@ -443,6 +443,7 @@ class SimpleWrapper(torch.nn.Module):
     
   def forward(self, inputs):
     b = inputs.size()[0]
+    return torch.concatenate([self.learningEmbeddings.view(1, 77, -1)]*b, dim=0)
     pieces = []
     posEmb = self.posEmbeddings.to(inputs.device)
     for i in range(inputs.size()[1]):
@@ -649,8 +650,7 @@ def main(discordQueue):
     position_embeddings = text_encoder.text_model.embeddings.position_embedding(position_ids).view(77, 768)
     
     wrappersss = SimpleWrapper(text_embeddings, position_embeddings).to(accelerator.device)
-    for p in wrappersss.parameters():
-      print(p)
+    
     
     #print(encoder_hidden_states.size())
         
@@ -668,6 +668,7 @@ def main(discordQueue):
     )
     allEmbedWeights = text_encoder.text_model.embeddings.token_embedding.weight
     norms = torch.linalg.norm(allEmbedWeights, dim=1, ord=2)**2
+    print("alls", allEmbedWeights.size())
 
     noise_scheduler = DDPMScheduler(
         beta_start=0.00085, beta_end=0.012, beta_schedule="scaled_linear", num_train_timesteps=1000
