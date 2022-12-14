@@ -432,11 +432,13 @@ def get_full_repo_name(model_id: str, organization: Optional[str] = None, token:
 
 
 class SimpleWrapper(torch.nn.Module):
-  def __init__(self):
+  def __init__(self, initVal):
     super().__init__()
-    self.layers = torch.nn.ModuleList([torch.nn.Linear(768, 768) for _ in range(77)])
+    self.blah = torch.nn.Parameter(initVal)
+    #self.layers = torch.nn.ModuleList([torch.nn.Linear(768, 768) for _ in range(77)])
   def forward(self, inputs):
     b = inputs.size()[0]
+    return torch.concatenate([self.blah.view(1, 77, -1)]*b, dim=0)
     output = []
     for i in range(inputs.size()[1]):
       self.layers[i].to(inputs.dtype)
@@ -633,9 +635,9 @@ def main(discordQueue):
     ).input_ids
     starting = tokenizer.pad({"input_ids": input_ids}, padding=True, return_tensors="pt").input_ids.view(1, -1)
         
-    #encoder_hidden_states = text_encoder(starting)[0].to('cuda').clone().detach().requires_grad_(True)
+    encoder_hidden_states = text_encoder(starting)[0]
     
-    wrappersss = SimpleWrapper().to(accelerator.device)
+    wrappersss = SimpleWrapper(encoder_hidden_states).to(accelerator.device)
     
     #print(encoder_hidden_states.size())
         
