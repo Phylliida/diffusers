@@ -819,6 +819,7 @@ def main(discordQueue):
                     loss = F.mse_loss(noise_pred.float(), noise.float(), reduction="mean")
 
                 accelerator.backward(loss)
+                print(loss)
                 if accelerator.sync_gradients:
                     params_to_clip = (
                         itertools.chain(unet.parameters(), text_encoder.parameters())
@@ -837,7 +838,7 @@ def main(discordQueue):
                 ENDOFTEXT = tokenizer._convert_token_to_id("<|endoftext|>")
                 embedInds = []
                 for v in range(encoder_hidden_states.size()[1]):
-                  vec = encoder_hidden_states[:,v].view(1, -1)
+                  vec = encoder_hidden_states[0,v].view(1, -1)
                   # x*x = norm_2(x)**2, so divide by 2 norm to get similiary
                   dots = torch.sum(vec*allEmbedWeights, axis=1)
                   bestEmbedInd = torch.argmax(dots)
