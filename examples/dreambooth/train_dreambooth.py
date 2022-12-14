@@ -432,13 +432,14 @@ def get_full_repo_name(model_id: str, organization: Optional[str] = None, token:
 
 
 class SimpleWrapper(torch.nn.Module):
-  def __init__(self, initVal):
+  def __init__(self, learningEmbeddings, posEmbeddings):
     super().__init__()
-    self.blah = torch.nn.Parameter(initVal)
+    self.learningEmbeddings = torch.nn.Parameter(learningEmbeddings)
+    self.posEmbeddings = posEmbeddings
     #self.layers = torch.nn.ModuleList([torch.nn.Linear(768, 768) for _ in range(77)])
   def forward(self, inputs):
     b = inputs.size()[0]
-    return torch.concatenate([self.blah.view(1, 77, -1)]*b, dim=0)
+    return torch.concatenate([(self.learningEmbeddings + self.posEmbeddings).view(1, 77, -1)]*b, dim=0)
     output = []
     for i in range(inputs.size()[1]):
       self.layers[i].to(inputs.dtype)
@@ -637,7 +638,15 @@ def main(discordQueue):
         
     encoder_hidden_states = text_encoder(starting)[0]
     
-    wrappersss = SimpleWrapper(encoder_hidden_states).to(accelerator.device)
+    input_ids = tokenizer([text], padding='max_length', max_length=pipe.tokenizer.model_max_length, truncation=True, return_tensors='pt')['input_ids'].to("cuda")
+    # we want gradients of embeddings only
+    if text_embeddings is None:
+      text_embeddings = text_encoder.text_model.embeddings.token_embedding(input_ids).view(77, 768)
+    batch, seqLen, embedDim = text_embeddings.size()
+    position_ids = text_encoder.text_model.embeddings.position_ids[:, :seqLen]
+    position_embeddings = text_encoder.text_model.embeddings.position_embedding(position_ids).view(77, 768)
+    
+    wrappersss = SimpleWrapper(text_embeddings, position_embeddings).to(accelerator.device)
     
     #print(encoder_hidden_states.size())
         
