@@ -449,12 +449,6 @@ class SimpleWrapper(torch.nn.Module):
       out1 = self.layer1[i](self.learningEmbeddings[i])
       pieces.append(torch.concatenate([(out1 + posEmb).view(1, 1, -1)]*b, dim=0))
     return torch.concatenate(pieces, dim=1)
-    
-    output = []
-    for i in range(inputs.size()[1]):
-      self.layers[i].to(inputs.dtype)
-      output.append((self.layers[i](inputs[:,i]) + ).view(b, 1, -1))
-    return torch.concatenate(output, dim=1)
   
         
 def main(discordQueue):
