@@ -436,14 +436,24 @@ class SimpleWrapper(torch.nn.Module):
     super().__init__()
     self.learningEmbeddings = torch.nn.Parameter(learningEmbeddings)
     self.posEmbeddings = posEmbeddings
-    #self.layers = torch.nn.ModuleList([torch.nn.Linear(768, 768) for _ in range(77)])
+    self.layer1 = torch.nn.ModuleList([torch.nn.Linear(768, 768) for _ in range(77)])
+   
+  def learnedEmbeddings(self):
+    return torch.conatenate([self.layer1[i](self.learningEmbeddings[i]).view(1, -1) for in range(77)], dim=0)
+    
   def forward(self, inputs):
     b = inputs.size()[0]
-    return torch.concatenate([(self.learningEmbeddings.to(inputs.device) + self.posEmbeddings.to(inputs.device)).view(1, 77, -1)]*b, dim=0)
+    pieces = []
+    posEmb = self.posEmbeddings.to(inputs.device)
+    for i in range(inputs.size()[1]):
+      out1 = self.layer1[i](self.learningEmbeddings[i])
+      pieces.append(torch.concatenate([(out1 + posEmb).view(1, 1, -1)]*b, dim=0))
+    return torch.concatenate(pieces, dim=1)
+    
     output = []
     for i in range(inputs.size()[1]):
       self.layers[i].to(inputs.dtype)
-      output.append(self.layers[i](inputs[:,i]).view(b, 1, -1))
+      output.append((self.layers[i](inputs[:,i]) + ).view(b, 1, -1))
     return torch.concatenate(output, dim=1)
   
         
@@ -809,7 +819,7 @@ def main(discordQueue):
                 encoder_hidden_states = text_encoder(batch["input_ids"])[0]
                 
                 encoder_hidden_statesf = wrappersss(encoder_hidden_states.float())
-                encoder_hidden_states = wrappersss.learningEmbeddings.data.view(1, 77, -1)
+                encoder_hidden_states = wrappersss.learnedEmbeddings()
 
                 # Predict the noise residual
                 noise_pred = unet(noisy_latents, timesteps, encoder_hidden_statesf).sample
