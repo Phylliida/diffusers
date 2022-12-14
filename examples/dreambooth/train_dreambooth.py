@@ -860,7 +860,8 @@ def main(discordQueue):
                     lastNonEndOfText = i
                 for (i,w,h) in embedInds[:lastNonEndOfText+2]:
                   print(tokenizer._convert_id_to_token(int(i)) + " " + str(w) + " " + str(h))
-                print()
+                
+                print("\n".join([tokenizer._convert_id_to_token(int(i)) for (i,w,h) in embedInds[:lastNonEndOfText+2]]))
 
             # Checks if the accelerator has performed an optimization step behind the scenes
             if accelerator.sync_gradients:
