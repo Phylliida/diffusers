@@ -432,17 +432,27 @@ def get_full_repo_name(model_id: str, organization: Optional[str] = None, token:
 
 
 class SimpleWrapper(torch.nn.Module):
-  def __init__(self, learningEmbeddings, posEmbeddings):
+  def __init__(self, input_ids, learningEmbeddings, posEmbeddings):
     super().__init__()
-    self.learningEmbeddings = torch.nn.Parameter(learningEmbeddings)
-    self.posEmbeddings = posEmbeddings
-    self.layer1 = torch.nn.ModuleList([torch.nn.Linear(768, 768) for _ in range(77)])
+    initial = torch.zeros([77, 49408])
+    for i, ind in enumerate(input_ids.view(-1)):
+      initial[i, ind] = 1.0
+    self.softmaxEmbeddings = torch.nn.Parameter(initial)
+    
+    #self.learningEmbeddings = torch.nn.Parameter(learningEmbeddings)
+    #self.better = torch.nn.Parameter(torch.randn([49408]))
+    
+    #self.posEmbeddings = posEmbeddings
+    #self.layer1 = torch.nn.ModuleList([torch.nn.Linear(768, 768) for _ in range(77)])
    
   def learnedEmbeddings(self):
     return torch.concatenate([self.layer1[i](self.learningEmbeddings[i]).view(1, -1) for i in range(77)], dim=0)
     
-  def forward(self, inputs):
+  def forward(self, inputs, text_encoder):
+    weights = torch.softmax(self.softmaxEmbeddings, dim=1)
+    output = torch.einsum('i j, j k -> i k', weights, text_encoder.text_model.embeddings.token_embedding.weight)
     b = inputs.size()[0]
+    return torch.concatenate([output.view(1, 77, -1)]*b, dim=0)
     return torch.concatenate([self.learningEmbeddings.view(1, 77, -1)]*b, dim=0)
     pieces = []
     posEmb = self.posEmbeddings.to(inputs.device)
@@ -649,7 +659,7 @@ def main(discordQueue):
     position_ids = text_encoder.text_model.embeddings.position_ids[:, :seqLen]
     position_embeddings = text_encoder.text_model.embeddings.position_embedding(position_ids).view(77, 768)
     
-    wrappersss = SimpleWrapper(text_embeddings, position_embeddings).to(accelerator.device)
+    wrappersss = SimpleWrapper(starting, text_embeddings, position_embeddings).to(accelerator.device)
     
     
     #print(encoder_hidden_states.size())
@@ -813,8 +823,8 @@ def main(discordQueue):
                 # Get the text embedding for conditioning
                 encoder_hidden_states = text_encoder(batch["input_ids"])[0]
                 
-                encoder_hidden_statesf = wrappersss(encoder_hidden_states.float())
-                encoder_hidden_states = wrappersss.learnedEmbeddings().view(1, 77, -1)
+                encoder_hidden_statesf = wrappersss(encoder_hidden_states.float(), text_encoder)
+                #encoder_hidden_states = wrappersss.learnedEmbeddings().view(1, 77, -1)
 
                 # Predict the noise residual
                 noise_pred = unet(noisy_latents, timesteps, encoder_hidden_statesf).sample
@@ -851,22 +861,31 @@ def main(discordQueue):
                 # ideas: weight every possible embedInds
                 # or alternatively, just put through a dense layer and tune the dense layer
                 
+                
                 STARTOFTEXT = tokenizer._convert_token_to_id("<|startoftext|>")
                 ENDOFTEXT = tokenizer._convert_token_to_id("<|endoftext|>")
                 embedInds = []
                 for v in range(encoder_hidden_states.size()[1]):
+                  '''
                   vec = encoder_hidden_states[0,v].view(1, -1)
                   # x*x = norm_2(x)**2, so divide by 2 norm to get similiary
                   dots = torch.sum(vec*allEmbedWeights, axis=1)
                   bestEmbedInd = torch.argmax(dots)
                   bestEmbedRanked = torch.argsort(-dots)
+                  '''
+                  
+                  bestEmbedInd = torch.argmax(wrappersss.softmaxEmbeddings[v])
+                  bestEmbedRanked = torch.argsort(-wrappersss.softmaxEmbeddings[v])
+                  dots = torch.softmax(wrappersss.softmaxEmbeddings[v])
                   topKInds = [int(i) for i in bestEmbedRanked[0:10] if not int(i) in [STARTOFTEXT, ENDOFTEXT]]
                   if int(bestEmbedInd) in [STARTOFTEXT, ENDOFTEXT]:
                     topKInds = []
-                  topKInds = [(tokenizer._convert_id_to_token(i), float(dots[i])/float(norms[i])) for i in topKInds]
+                  #topKInds = [(tokenizer._convert_id_to_token(i), float(dots[i])/float(norms[i])) for i in topKInds]
+                  topKInds = [(tokenizer._convert_id_to_token(i), float(dots[i])) for i in topKInds]
                   bestEmbed = text_encoder.text_model.embeddings.token_embedding(bestEmbedInd)
-                  diff = torch.sum(bestEmbed.view(1,-1)*vec)/norms[bestEmbedInd]
-                  embedInds.append((int(bestEmbedInd), float(diff), topKInds)) 
+                  #diff = torch.sum(bestEmbed.view(1,-1)*vec)/norms[bestEmbedInd]
+                  #embedInds.append((int(bestEmbedInd), float(diff), topKInds)) 
+                  embedInds.append((int(bestEmbedInd), None, topKInds)) 
                   #if t%discretePer == (discretePer-1):
                   #  encoder_hidden_states.data[:,v] = bestEmbed
                 lastNonEndOfText = 0
