@@ -876,7 +876,7 @@ def main(discordQueue):
                   
                   bestEmbedInd = torch.argmax(wrappersss.softmaxEmbeddings[v])
                   bestEmbedRanked = torch.argsort(-wrappersss.softmaxEmbeddings[v])
-                  dots = torch.softmax(wrappersss.softmaxEmbeddings[v], dim=0)
+                  dots = wrappersss.softmaxEmbeddings[v]
                   topKInds = [int(i) for i in bestEmbedRanked[0:10] if not int(i) in [STARTOFTEXT, ENDOFTEXT]]
                   if int(bestEmbedInd) in [STARTOFTEXT, ENDOFTEXT]:
                     topKInds = []
