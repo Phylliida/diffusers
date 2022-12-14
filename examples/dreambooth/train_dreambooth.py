@@ -439,6 +439,7 @@ class SimpleWrapper(torch.nn.Module):
     b = inputs.size()[0]
     output = []
     for i in range(inputs.size()[1]):
+      self.layers[i].to(inputs.dtype)
       output.append(self.layers[i](inputs[:,i]).view(b, 1, -1))
     return torch.concatenate(output, dim=1)
   
@@ -634,7 +635,7 @@ def main(discordQueue):
         
     #encoder_hidden_states = text_encoder(starting)[0].to('cuda').clone().detach().requires_grad_(True)
     
-    wrappersss = SimpleWrapper().to("cuda").half()
+    wrappersss = SimpleWrapper().to(accelerator.device)
     
     #print(encoder_hidden_states.size())
         
