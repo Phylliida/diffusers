@@ -447,7 +447,7 @@ class SimpleWrapper(torch.nn.Module):
     posEmb = self.posEmbeddings.to(inputs.device)
     for i in range(inputs.size()[1]):
       out1 = self.layer1[i](self.learningEmbeddings[i])
-      pieces.append(torch.concatenate([(out1 + posEmb).view(1, 1, -1)]*b, dim=0))
+      pieces.append(torch.concatenate([(out1 + posEmb[i]).view(1, 1, -1)]*b, dim=0))
     return torch.concatenate(pieces, dim=1)
   
         
