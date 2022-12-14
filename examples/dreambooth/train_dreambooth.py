@@ -434,7 +434,7 @@ def get_full_repo_name(model_id: str, organization: Optional[str] = None, token:
 class SimpleWrapper(torch.nn.Module):
   def __init__(self):
     super().__init__()
-    layers = [nn.Linear(768, 768) for _ in range(77)]
+    layers = [torch.nn.Linear(768, 768) for _ in range(77)]
   def forward(self, inputs):
     b = inputs.size()[0]
     output = []
