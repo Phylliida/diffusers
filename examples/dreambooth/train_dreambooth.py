@@ -431,6 +431,18 @@ def get_full_repo_name(model_id: str, organization: Optional[str] = None, token:
         return f"{organization}/{model_id}"
 
 
+class SimpleWrapper(torch.nn.Module):
+  def __init__(self):
+    super().__init__()
+    layers = [nn.Linear(768, 768) for _ in range(77)]
+  def forward(self, inputs):
+    b = inputs.size()[0]
+    output = []
+    for i in range(inputs.size()[1]):
+      output.append(layers[i](inputs[:,i]).view(b, 1, -1))
+    return torch.concatenate(output, dim=1)
+  
+        
 def main(discordQueue):
     args = parse_args()
     
@@ -620,15 +632,17 @@ def main(discordQueue):
     ).input_ids
     starting = tokenizer.pad({"input_ids": input_ids}, padding=True, return_tensors="pt").input_ids.view(1, -1)
         
-    encoder_hidden_states = text_encoder(starting)[0].to('cuda').clone().detach().requires_grad_(True)
+    #encoder_hidden_states = text_encoder(starting)[0].to('cuda').clone().detach().requires_grad_(True)
     
-    print(encoder_hidden_states.size())
+    wrappersss = SimpleWrapper()
+    
+    #print(encoder_hidden_states.size())
         
     #params_to_optimize = (
     #    itertools.chain(unet.parameters(), text_encoder.parameters()) if args.train_text_encoder else unet.parameters()
     #)
     
-    params_to_optimize = (encoder_hidden_states,)
+    params_to_optimize = (wrappersss.parameters())
     optimizer = optimizer_class(
         params_to_optimize,
         lr=args.learning_rate,
@@ -780,7 +794,9 @@ def main(discordQueue):
                 noisy_latents = noise_scheduler.add_noise(latents, noise, timesteps)
 
                 # Get the text embedding for conditioning
-                #encoder_hidden_states = text_encoder(batch["input_ids"])[0]
+                encoder_hidden_states = text_encoder(batch["input_ids"])[0]
+                
+                encoder_hidden_states = wrappersss(encoder_hidden_states)
 
                 # Predict the noise residual
                 noise_pred = unet(noisy_latents, timesteps, encoder_hidden_states).sample
@@ -812,6 +828,9 @@ def main(discordQueue):
                 optimizer.step()
                 lr_scheduler.step()
                 optimizer.zero_grad()
+                
+                # ideas: weight every possible embedInds
+                # or alternatively, just put through a dense layer and tune the dense layer
                 
                 STARTOFTEXT = tokenizer._convert_token_to_id("<|startoftext|>")
                 ENDOFTEXT = tokenizer._convert_token_to_id("<|endoftext|>")
