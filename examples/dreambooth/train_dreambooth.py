@@ -873,7 +873,7 @@ def main(discordQueue):
                   if tok != ENDOFTEXT:
                     lastNonEndOfText = i
                 for (i,w,h) in embedInds[:lastNonEndOfText+2]:
-                  print(tokenizer._convert_id_to_token(int(i)) + " " + str(w) + " " + str(topKInds[:2]))
+                  print(tokenizer._convert_id_to_token(int(i)) + " " + str(w) + " " + str(h[:2]))
                 
                 print(" ".join([tokenizer._convert_id_to_token(int(i)) for (i,w,h) in embedInds[:lastNonEndOfText+2]]))
 
