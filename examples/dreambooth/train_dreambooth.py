@@ -865,7 +865,7 @@ def main(discordQueue):
                   topKInds = [(tokenizer._convert_id_to_token(i), float(dots[i])/float(norms[i])) for i in topKInds]
                   bestEmbed = text_encoder.text_model.embeddings.token_embedding(bestEmbedInd)
                   diff = torch.sum(bestEmbed.view(1,-1)*vec)/norms[bestEmbedInd]
-                  embedInds.append((int(bestEmbedInd), float(diff), str(topKInds))) 
+                  embedInds.append((int(bestEmbedInd), float(diff), topKInds)) 
                   #if t%discretePer == (discretePer-1):
                   #  encoder_hidden_states.data[:,v] = bestEmbed
                 lastNonEndOfText = 0
@@ -873,9 +873,9 @@ def main(discordQueue):
                   if tok != ENDOFTEXT:
                     lastNonEndOfText = i
                 for (i,w,h) in embedInds[:lastNonEndOfText+2]:
-                  print(tokenizer._convert_id_to_token(int(i)) + " " + str(w) + " " + str(h[:2]))
+                  print(tokenizer._convert_id_to_token(int(i)) + " " + str(w) + " " + str(topKInds[:2]))
                 
-                print("\n".join([tokenizer._convert_id_to_token(int(i)) for (i,w,h) in embedInds[:lastNonEndOfText+2]]))
+                print(" ".join([tokenizer._convert_id_to_token(int(i)) for (i,w,h) in embedInds[:lastNonEndOfText+2]]))
 
             # Checks if the accelerator has performed an optimization step behind the scenes
             if accelerator.sync_gradients:
