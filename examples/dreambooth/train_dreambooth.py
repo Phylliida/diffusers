@@ -439,7 +439,7 @@ class SimpleWrapper(torch.nn.Module):
     self.layer1 = torch.nn.ModuleList([torch.nn.Linear(768, 768) for _ in range(77)])
    
   def learnedEmbeddings(self):
-    return torch.conatenate([self.layer1[i](self.learningEmbeddings[i]).view(1, -1) for i in range(77)], dim=0)
+    return torch.concatenate([self.layer1[i](self.learningEmbeddings[i]).view(1, -1) for i in range(77)], dim=0)
     
   def forward(self, inputs):
     b = inputs.size()[0]
