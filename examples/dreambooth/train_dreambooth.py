@@ -639,8 +639,7 @@ def main(discordQueue):
     encoder_hidden_states = text_encoder(starting)[0]
     
     # we want gradients of embeddings only
-    if text_embeddings is None:
-      text_embeddings = text_encoder.text_model.embeddings.token_embedding(starting).view(77, 768)
+    text_embeddings = text_encoder.text_model.embeddings.token_embedding(starting).view(77, 768)
     seqLen, embedDim = text_embeddings.size()
     position_ids = text_encoder.text_model.embeddings.position_ids[:, :seqLen]
     position_embeddings = text_encoder.text_model.embeddings.position_embedding(position_ids).view(77, 768)
